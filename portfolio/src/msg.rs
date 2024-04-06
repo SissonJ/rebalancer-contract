@@ -1,39 +1,22 @@
-use crate::state::{ContractStatus, PortfolioConfig};
+use crate::state::{ContractStatus, Portfolio, PortfolioConfig};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Binary, ContractInfo, Uint128, Uint256};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub admin: Addr,
+    pub factory: ContractInfo,
+    pub snip20: ContractInfo,
+    pub accepted_deposit_tokens: Vec<ContractInfo>,
     pub viewing_key: String,
-    pub swap_factory: ContractInfo,
-    pub withdraw_fee: Uint128,
-    pub create_fee: Uint128,
-    pub snip20_code_id: i32,
-    pub portfolio_code_id: i32,
-    pub accepted_deposit_tokens: Option<Vec<ContractInfo>>,
+    pub portfolio: Portfolio,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    // ADMIN
-    UpdateConfig {
-        admin: Option<Addr>,
-        swap_factory: Option<ContractInfo>,
-        withdraw_fee: Option<i32>,
-        create_fee: Option<i32>,
-        snip20_code_id: Option<i32>,
-        accepted_deposit_tokens: Option<Vec<ContractInfo>>,
-        contract_status: Option<ContractStatus>,
-    },
-    RegisterAssets {
-        assets: Vec<ContractInfo>,
-    },
-    // Responsible for rebalancing protfolios
+    // Responsible for rebalancing portfolio
     // Will reset UNUPDATED_LIST if found empty
-    Update {
-        batch_amount: Option<Uint128>,
-    },
+    Update {},
+    Withdraw {},
 
     //Receiver interface
     Receive {
@@ -42,18 +25,6 @@ pub enum ExecuteMsg {
         amount: Uint256,
         #[serde(default)]
         msg: Option<Binary>,
-    },
-}
-
-#[cw_serde]
-pub enum ReceiveMsg {
-    CreatePortfolio {
-        config: Vec<PortfolioConfig>,
-        name: String,
-    },
-    Withdraw {},
-    Deposit {
-        portfolio_snip20: Addr,
     },
 }
 

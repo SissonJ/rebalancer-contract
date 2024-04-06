@@ -2,35 +2,50 @@ use cosmwasm_std::{
     entry_point, from_binary, to_binary, Addr, Binary, ContractInfo, Deps, DepsMut, Env,
     MessageInfo, Response, StdError, StdResult, Uint128, Uint256,
 };
+use secret_toolkit::snip20;
 
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg};
 use crate::state::{
-    Config, ContractStatus, Portfolio, PortfolioConfig, CONFIG, PORTFOLIO_LIST, REGISTERED_ASSETS,
-    UNUPDATED_LIST, VIEWING_KEY,
+    Config, ContractStatus, Portfolio, PortfolioConfig, CONFIG, REGISTERED_ASSETS, VIEWING_KEY,
 };
+
+pub const BLOCK_SIZE: usize = 256;
 
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let state = Config {
-        admin: info.sender,
-        swap_factory: msg.swap_factory,
-        withdraw_fee: msg.withdraw_fee,
-        create_fee: msg.create_fee,
-        snip20_code_id: msg.snip20_code_id,
-        portfolio_code_id: msg.portfolio_code_id,
-        accepted_deposit_tokens: msg.accepted_deposit_tokens.unwrap_or(vec![]),
-        contract_status: ContractStatus::ACTIVE,
+        factory: msg.factory,
+        accepted_deposit_tokens: msg.accepted_deposit_tokens,
+        snip20: msg.snip20,
+        portfolio: msg.portfolio.clone(),
     };
 
+    let mut messages = vec![];
+
+    for asset in msg.portfolio.config.iter() {
+        messages.push(snip20::set_viewing_key_msg(
+            msg.viewing_key,
+            None,
+            BLOCK_SIZE,
+            asset.asset.code_hash,
+            asset.asset.address,
+        ));
+    }
+
+    messages.push(snip20::register_receive_msg(
+        env.contract.code_hash,
+        None,
+        BLOCK_SIZE,
+        msg.snip20.code_hash,
+        msg.snip20.address,
+    ));
+
     CONFIG.save(deps.storage, &state)?;
-    PORTFOLIO_LIST.save(deps.storage, &vec![])?;
-    UNUPDATED_LIST.save(deps.storage, &vec![])?;
-    REGISTERED_ASSETS.save(deps.storage, &vec![])?;
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
 
     Ok(Response::default())
