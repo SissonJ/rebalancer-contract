@@ -1,34 +1,36 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use cosmwasm_std::{Addr, ContractInfo, Storage};
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Addr, ContractInfo, Storage, Uint128};
 use secret_toolkit::storage::Item;
 use secret_toolkit::{serialization::Json, storage::Keymap};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 
+#[cw_serde]
 pub enum ContractStatus {
     ACTIVE,    // full funcitonality
     FROZEN,    // no functionality
     PROTECTED, // withdraw functionality only
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct Config {
     pub admin: Addr,
     pub swap_factory: ContractInfo,
-    pub withdraw_fee: i32,
-    pub create_fee: i32,
+    pub withdraw_fee: Uint128,
+    pub create_fee: Uint128,
     pub snip20_code_id: i32,
+    pub portfolio_code_id: i32,
     pub accepted_deposit_tokens: Vec<ContractInfo>,
     pub contract_status: ContractStatus,
 }
 
+#[cw_serde]
 pub struct PortfolioConfig {
     pub percent: u32,
     pub asset: ContractInfo,
 }
 
+#[cw_serde]
 pub struct Portfolio {
     pub config: Vec<PortfolioConfig>,
     pub creator: Addr,
@@ -36,8 +38,10 @@ pub struct Portfolio {
     pub snip20: ContractInfo,
 }
 
+#[cw_serde]
 pub struct RouteKey(Addr, Addr);
 
+#[cw_serde]
 pub struct SwapContract {
     addr: Addr,
     code_hash: String,
@@ -55,7 +59,7 @@ pub static CONFIG: Item<Config> = Item::new(KEY_CONFIG);
 pub static PORTFOLIO_LIST: Item<Vec<Addr>> = Item::new(KEY_PORTFOLIO_LIST);
 // List of all portfolios pending update
 pub static UNUPDATED_LIST: Item<Vec<Addr>> = Item::new(KEY_UNUPDATED_LIST);
-pub static REGISTERED_ASSTS: Item<Vec<Addr>> = Item::new(KEY_REGISTERED_ASSETS);
+pub static REGISTERED_ASSETS: Item<Vec<Addr>> = Item::new(KEY_REGISTERED_ASSETS);
 pub static VIEWING_KEY: Item<String> = Item::new(KEY_VIEWING_KEY);
 // Hash map of snip20 protfolio token and the portfolio information
 pub static PORTFOLIO: Keymap<Addr, Portfolio> = Keymap::new(KEY_PORTFOLIO);

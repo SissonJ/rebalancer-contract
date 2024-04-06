@@ -7,9 +7,10 @@ pub struct InstantiateMsg {
     pub admin: Addr,
     pub viewing_key: String,
     pub swap_factory: ContractInfo,
-    pub withdraw_fee: i32,
+    pub withdraw_fee: Uint128,
     pub create_fee: Uint128,
     pub snip20_code_id: i32,
+    pub portfolio_code_id: i32,
     pub accepted_deposit_tokens: Option<Vec<ContractInfo>>,
 }
 
@@ -51,7 +52,9 @@ pub enum ReceiveMsg {
         name: String,
     },
     Withdraw {},
-    Deposit {},
+    Deposit {
+        portfolio_snip20: Addr,
+    },
 }
 
 #[cw_serde]
