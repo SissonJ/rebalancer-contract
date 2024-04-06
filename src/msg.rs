@@ -1,20 +1,39 @@
+use crate::state::{ContractStatus, PortfolioConfig};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Binary, ContractInfo, Uint128, Uint256};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use crate::state::PortfolioConfig;
 
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin: Addr,
+    pub viewing_key: String,
     pub swap_factory: ContractInfo,
-    pub fee: i32,
+    pub withdraw_fee: i32,
+    pub create_fee: Uint128,
     pub snip20_code_id: i32,
+    pub accepted_deposit_tokens: Option<Vec<ContractInfo>>,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    // ADMIN
+    UpdateConfig {
+        admin: Option<Addr>,
+        swap_factory: Option<ContractInfo>,
+        withdraw_fee: Option<i32>,
+        create_fee: Option<i32>,
+        snip20_code_id: Option<i32>,
+        accepted_deposit_tokens: Option<Vec<ContractInfo>>,
+        contract_status: Option<ContractStatus>,
+    },
+    RegisterAssets {
+        assets: Vec<ContractInfo>,
+    },
+    // Responsible for rebalancing protfolios
+    // Will reset UNUPDATED_LIST if found empty
+    Update {
+        batch_amount: Option<Uint128>,
+    },
+
     //Receiver interface
     Receive {
         sender: Addr,
@@ -23,14 +42,14 @@ pub enum ExecuteMsg {
         #[serde(default)]
         msg: Option<Binary>,
     },
-    Update {
-        batch_amount: Uint128,
-    },
 }
 
 #[cw_serde]
 pub enum ReceiveMsg {
-    CreatePortfolio { config: Vec<PortfolioConfig> },
+    CreatePortfolio {
+        config: Vec<PortfolioConfig>,
+        name: String,
+    },
     Withdraw {},
     Deposit {},
 }
@@ -40,10 +59,11 @@ pub enum QueryMsg {
     // GetCount returns the current count as a json-encoded number
     GetConfig {},
     GetState {},
+    GetUnupdated {},
 }
 
-// We define a custom struct for each query response
 #[cw_serde]
-pub struct CountResponse {
-    pub count: i32,
-}
+pub enum QueryResponse {}
+
+#[cw_serde]
+pub enum ExecuteResponse {}
