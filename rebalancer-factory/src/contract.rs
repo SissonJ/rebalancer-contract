@@ -186,6 +186,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetConfig {} => to_binary(&get_config(deps)?),
         QueryMsg::GetState {} => to_binary(&get_config(deps)?),
         QueryMsg::GetUnupdated {} => to_binary(&get_config(deps)?),
+        QueryMsg::Prices { .. } => to_binary(&get_config(deps)?),
+        QueryMsg::Route { .. } => to_binary(&get_config(deps)?),
     }
 }
 

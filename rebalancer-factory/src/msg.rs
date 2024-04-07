@@ -1,6 +1,8 @@
-use crate::state::{ContractStatus, PortfolioConfig};
+use crate::state::{ContractStatus, PortfolioConfig, RouteKey, SwapContract};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Binary, ContractInfo, Uint128, Uint256};
+use cosmwasm_std::{
+    to_binary, Addr, Binary, ContractInfo, DepsMut, StdError, StdResult, Uint128, Uint256,
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -63,10 +65,64 @@ pub enum QueryMsg {
     GetConfig {},
     GetState {},
     GetUnupdated {},
+    Prices { assets: Vec<Addr>, key: String },
+    Route { route: RouteKey, key: String },
 }
 
 #[cw_serde]
-pub enum QueryResponse {}
+pub struct Price {
+    pub asset: Addr,
+    pub price: Uint128,
+}
+
+#[cw_serde]
+pub struct Route {
+    pub key: RouteKey,
+    pub route: Vec<SwapContract>,
+    pub router_contract: ContractInfo,
+}
+
+#[cw_serde]
+pub enum QueryAnswer {
+    Prices { prices: Vec<Price> },
+    Route { route: Route },
+}
 
 #[cw_serde]
 pub enum ExecuteResponse {}
+
+pub fn query_prices(
+    deps: &DepsMut,
+    contract: ContractInfo,
+    assets: Vec<Addr>,
+    key: String,
+) -> Result<Vec<Price>, StdError> {
+    match deps.querier.query(&cosmwasm_std::QueryRequest::Wasm(
+        cosmwasm_std::WasmQuery::Smart {
+            contract_addr: contract.address.into_string(),
+            code_hash: contract.code_hash,
+            msg: to_binary(&QueryMsg::Prices { assets, key })?,
+        },
+    ))? {
+        QueryAnswer::Prices { prices } => Ok(prices),
+        _ => Err(StdError::generic_err("Query prices error")),
+    }
+}
+
+pub fn query_route(
+    deps: &DepsMut,
+    contract: ContractInfo,
+    route: RouteKey,
+    key: String,
+) -> Result<Route, StdError> {
+    match deps.querier.query(&cosmwasm_std::QueryRequest::Wasm(
+        cosmwasm_std::WasmQuery::Smart {
+            contract_addr: contract.address.into_string(),
+            code_hash: contract.code_hash,
+            msg: to_binary(&QueryMsg::Route { route, key })?,
+        },
+    ))? {
+        QueryAnswer::Route { route } => Ok(route),
+        _ => Err(StdError::generic_err("Query route error")),
+    }
+}

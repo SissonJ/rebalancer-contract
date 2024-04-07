@@ -39,7 +39,7 @@ pub struct Portfolio {
 }
 
 #[cw_serde]
-pub struct RouteKey(Addr, Addr);
+pub struct RouteKey(pub Addr, pub Addr);
 
 #[cw_serde]
 pub struct SwapContract {
