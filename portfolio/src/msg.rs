@@ -1,25 +1,30 @@
-use crate::state::{ContractStatus, Portfolio, PortfolioConfig};
+use crate::state::{Config, Portfolio, PortfolioConfig};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Binary, ContractInfo, Uint128, Uint256};
 use rebalancer_factory::state::SwapContract;
+use secret_toolkit::snip20::Balance;
 
 #[cw_serde]
 pub struct InstantiateMsg {
     pub factory: ContractInfo,
-    pub snip20: ContractInfo,
     pub accepted_deposit_tokens: Vec<ContractInfo>,
     pub viewing_key: String,
     pub portfolio: Portfolio,
+    pub admin: Addr,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    Update {},
+    Update {
+        tolerance_percent: u128,
+    },
+    UpdateKey {
+        viewing_key: String,
+    },
     Withdraw {
         share: Uint128,
         receiver: Addr,
         fee: u128,
-        admin: Addr,
     },
 
     //Receiver interface
@@ -36,18 +41,45 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     // GetCount returns the current count as a json-encoded number
     GetConfig {},
-    GetState {},
-    GetUnupdated {},
+    GetFees {},
+    GetBalances {},
 }
 
 #[cw_serde]
-pub enum QueryResponse {}
+pub struct Fee {
+    pub asset: Addr,
+    pub amount: Uint128,
+}
+
+#[cw_serde]
+pub struct BalanceItem {
+    pub asset: Addr,
+    pub amount: Uint128,
+}
+
+#[cw_serde]
+pub enum QueryAnswer {
+    GetConfig { config: Config },
+    GetFees { fees: Vec<Fee> },
+    GetBalances { balances: Vec<BalanceItem> },
+}
 
 #[cw_serde]
 pub enum ExecuteAnswer {
     Withdraw {
         withdraw_assets: Vec<WithdrawAction>,
     },
+    Update {
+        actions: Vec<UpdateAction>,
+    },
+}
+
+#[cw_serde]
+pub struct UpdateAction {
+    pub from_asset: ContractInfo,
+    pub to_asset: ContractInfo,
+    pub sell_amount: Uint256,
+    pub expected_return: Uint256,
 }
 
 #[cw_serde]

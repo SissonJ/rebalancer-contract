@@ -7,9 +7,9 @@ pub static CONFIG_KEY: &[u8] = b"config";
 #[cw_serde]
 pub struct Config {
     pub factory: ContractInfo,
+    pub admin: Addr,
     pub accepted_deposit_tokens: Vec<ContractInfo>,
     pub portfolio: Portfolio,
-    pub tolerance: u128,
 }
 
 #[cw_serde]
