@@ -29,7 +29,7 @@ secret-toolkit = { version = "0.10.0",  features = [
   "permit",
   "viewing-key",
 ] }
-rebalancer-factory = { version = "0.1.0", path = "../rebalancer-factory" }
+rebalancer-factory = { package = "rebalancer-factory", version = "0.1.0", git = "https://github.com/SissonJ/rebalancer-contract.git" }
 
 # Uncomment these for some common extra tools
 # secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit", tag = "v0.8.0" }
