@@ -469,7 +469,7 @@ dependencies = [
 [[package]]
 name = "rebalancer-factory"
 version = "0.1.0"
-source = "git+https://github.com/SissonJ/rebalancer-contract.git#7fbfe579b16a5e25bb199b43c4786a798d8bcd33"
+source = "git+https://github.com/SissonJ/rebalancer-contract.git#a044a0cf102de55ed5b48c0599810a50a116a78a"
 dependencies = [
  "cosmwasm-schema",
  "schemars",
