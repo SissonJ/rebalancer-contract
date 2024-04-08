@@ -2,7 +2,6 @@ use crate::state::{Config, Portfolio, PortfolioConfig};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Binary, ContractInfo, Uint128, Uint256};
 use rebalancer_factory::state::SwapContract;
-use secret_toolkit::snip20::Balance;
 
 #[cw_serde]
 pub struct InstantiateMsg {

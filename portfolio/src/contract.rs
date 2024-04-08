@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    entry_point, from_binary, to_binary, Addr, Binary, ContractInfo, Deps, DepsMut, Env,
-    MessageInfo, Response, StdError, StdResult, Uint128, Uint256,
+    entry_point, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    StdResult, Uint128, Uint256,
 };
 use rebalancer_factory::state::RouteKey;
 use secret_toolkit::snip20;
@@ -10,7 +10,7 @@ use crate::msg::{
     PositionDetails, QueryAnswer, QueryMsg, RouterMsg, SwapTokensForExact, UpdateAction,
     WithdrawAction,
 };
-use crate::state::{Config, Portfolio, PortfolioConfig, CONFIG, FEES, VIEWING_KEY};
+use crate::state::{Config, PortfolioConfig, CONFIG, FEES, VIEWING_KEY};
 use rebalancer_factory::msg::{query_prices, query_route};
 
 pub const BLOCK_SIZE: usize = 256;
@@ -20,7 +20,7 @@ pub const NORMALIZATION_FACTOR: u32 = 18;
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let mut state = Config {
@@ -172,14 +172,13 @@ pub fn try_update(
     }
     let viewing_key = VIEWING_KEY.load(deps.storage)?;
 
-    let mut portfolio_total_value = Uint128::zero();
-    let mut percentage_tally = Uint128::zero();
+    let mut portfolio_total_value = Uint256::zero();
     let mut messages = vec![];
     let mut actions = vec![];
 
     let mut imbalanced_positions = vec![];
 
-    let mut temp_config = config.portfolio.config.clone();
+    let temp_config = config.portfolio.config.clone();
     let price_query_assets = temp_config
         .into_iter()
         .map(|x| x.asset.address)
@@ -193,7 +192,6 @@ pub fn try_update(
     )?;
 
     for asset_position in config.portfolio.config {
-        //percentage_tally = percentage_tally.saturating_add(Uint128::new(asset_position.percent));
         let price_query = price_query_vec
             .iter()
             .find(|&x| x.asset == asset_position.asset.address);
@@ -206,12 +204,14 @@ pub fn try_update(
                 asset_position.asset.code_hash.clone(),
                 asset_position.asset.address.clone().into_string(),
             )?;
+            let value = Uint256::from_uint128(balance.amount)
+                .saturating_mul(Uint256::from_uint128(price.price));
             imbalanced_positions.push(PositionDetails {
                 position: asset_position,
-                value: Uint256::from_uint128(balance.amount)
-                    .saturating_mul(Uint256::from_uint128(price.price)),
+                value,
                 price: price.price,
-            })
+            });
+            portfolio_total_value = portfolio_total_value.saturating_add(value);
         }
     }
 
@@ -223,24 +223,23 @@ pub fn try_update(
         let target_asset_value =
             portfolio_total_value.multiply_ratio(imbalanced_position.position.percent, 100u128);
         let tolerance_amount = target_asset_value.multiply_ratio(tolerance_percent, 100u128);
-        if imbalanced_position.value.gt(&Uint256::from_uint128(
-            target_asset_value.saturating_add(tolerance_amount),
-        )) {
+        if imbalanced_position
+            .value
+            .gt(&target_asset_value.saturating_add(tolerance_amount))
+        {
             over_target.push(PositionCorrection {
                 position: imbalanced_position.position.clone(),
-                correction: imbalanced_position
-                    .value
-                    .saturating_sub(Uint256::from_uint128(target_asset_value)),
+                correction: imbalanced_position.value.saturating_sub(target_asset_value),
                 price: imbalanced_position.price,
             });
         }
-        if imbalanced_position.value.lt(&Uint256::from_uint128(
-            target_asset_value.saturating_sub(tolerance_amount),
-        )) {
+        if imbalanced_position
+            .value
+            .lt(&target_asset_value.saturating_sub(tolerance_amount))
+        {
             under_target.push(PositionCorrection {
                 position: imbalanced_position.position,
-                correction: Uint256::from_uint128(target_asset_value)
-                    .saturating_sub(imbalanced_position.value),
+                correction: target_asset_value.saturating_sub(imbalanced_position.value),
                 price: imbalanced_position.price,
             });
         }
@@ -280,7 +279,7 @@ pub fn try_update(
                         under_target_position.correction = under_target_position
                             .correction
                             .saturating_sub(over_target_correction);
-                        (Uint256::zero(), Uint256::zero())
+                        (sell_amount, expected_return)
                     } else {
                         (Uint256::zero(), Uint256::zero())
                     }
@@ -339,22 +338,23 @@ pub fn try_update_key(
     info: MessageInfo,
     viewing_key: String,
 ) -> StdResult<Response> {
-    let mut config = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     if info.sender != config.factory.address || info.sender != config.admin {
         return Err(StdError::generic_err("Must be factory contract"));
     }
-    VIEWING_KEY.save(deps.storage, &viewing_key);
+    // TODO set snip20 viewing key msgs
+    VIEWING_KEY.save(deps.storage, &viewing_key)?;
     Ok(Response::default())
 }
 
 pub fn try_receive(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     sender: Addr,
-    from: Addr,
-    amount: Uint256,
-    msg: Option<Binary>,
+    _from: Addr,
+    _amount: Uint256,
+    _msg: Option<Binary>,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
     if config
@@ -372,11 +372,11 @@ pub fn try_receive(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&get_config(deps)?),
-        QueryMsg::GetFees {} => to_binary(&get_config(deps)?),
-        QueryMsg::GetBalances {} => to_binary(&get_config(deps)?),
+        QueryMsg::GetFees {} => to_binary(&get_fees(deps)?),
+        QueryMsg::GetBalances {} => to_binary(&get_balances(deps, env)?),
     }
 }
 
@@ -406,7 +406,7 @@ fn get_balances(deps: Deps, env: Env) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::GetBalances { balances })
 }
 
-fn get_fees(deps: Deps, env: Env) -> StdResult<QueryAnswer> {
+fn get_fees(deps: Deps) -> StdResult<QueryAnswer> {
     let state = CONFIG.load(deps.storage)?;
     let mut fees = vec![];
     for position in state.portfolio.config {

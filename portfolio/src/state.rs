@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, ContractInfo, Storage, Uint128};
+use cosmwasm_std::{Addr, ContractInfo, Uint128};
 use secret_toolkit::storage::{Item, Keymap};
 
 pub static CONFIG_KEY: &[u8] = b"config";
